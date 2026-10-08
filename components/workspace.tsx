@@ -7,15 +7,15 @@ import {
   Sparkles, Users2, X
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { attentionItems, demoActivities, demoParticipants, etoserTasks, type Role } from '@/lib/demo-data'
+import { attentionItems, demoActivities, demoParticipants, etoserTasks, type ActivityItem, type ParticipantItem, type Role, type TaskItem } from '@/lib/demo-data'
 
-type ActivityItem = typeof demoActivities[number]
-type ParticipantItem = typeof demoParticipants[number]
 type LiveData = {
   profile?: { id:string; full_name:string; app_role:string; region?:string|null; cohort?:string|null }
   counts?: { participants:number; regions:number; activities:number; assignments:number; completion:number }
   activities?: ActivityItem[]
   participants?: ParticipantItem[]
+  tasks?: TaskItem[]
+  points?: number
 }
 type NavKey = 'dashboard'|'activities'|'participants'|'tasks'|'calendar'
 
@@ -39,7 +39,9 @@ export function Workspace({
   const [query,setQuery] = useState('')
   const [mobile,setMobile] = useState(false)
   const [modal,setModal] = useState(false)
+  const [selectedTask,setSelectedTask] = useState<TaskItem|null>(null)
   const [activities,setActivities] = useState<ActivityItem[]>(liveData?.activities?.length ? liveData.activities : demoActivities)
+  const [tasks,setTasks] = useState<TaskItem[]>(liveData?.tasks?.length ? liveData.tasks : etoserTasks)
 
   const effectiveRole = demo ? role : ((liveData?.profile?.app_role as Role) || initialRole)
   const participants = liveData?.participants?.length ? liveData.participants : demoParticipants
@@ -131,10 +133,10 @@ export function Workspace({
         </header>
 
         <div className="workspace-content">
-          {nav==='dashboard' && <Dashboard role={effectiveRole} demo={demo} liveData={liveData} setNav={setNav}/>}
+          {nav==='dashboard' && <Dashboard role={effectiveRole} demo={demo} liveData={liveData} tasks={tasks} setNav={setNav}/>}
           {nav==='activities' && <Activities role={effectiveRole} activities={activities} onCreate={()=>setModal(true)}/>}
           {nav==='participants' && effectiveRole!=='etoser' && <Participants participants={filteredParticipants}/>}
-          {nav==='tasks' && <Tasks role={effectiveRole}/>}
+          {nav==='tasks' && <Tasks role={effectiveRole} participants={filteredParticipants} tasks={tasks} onTask={setSelectedTask}/>}
           {nav==='calendar' && <CalendarView role={effectiveRole} activities={activities}/>}
         </div>
       </main>
@@ -146,12 +148,24 @@ export function Workspace({
           onCreated={a=>{setActivities(v=>[a,...v]);setModal(false)}}
         />
       )}
+      {selectedTask&&(
+        <TaskActionModal
+          demo={demo}
+          task={selectedTask}
+          profileId={liveData?.profile?.id}
+          close={()=>setSelectedTask(null)}
+          onUpdated={(id,status,statusKey)=>{
+            setTasks(items=>items.map(t=>t.id===id?{...t,status,statusKey,action:statusKey==='verified'?'Lihat':statusKey==='submitted'?'Lihat':t.action}:t))
+            setSelectedTask(null)
+          }}
+        />
+      )}
     </div>
   )
 }
 
-function Dashboard({role,demo,liveData,setNav}:{role:Role;demo:boolean;liveData?:LiveData;setNav:(v:NavKey)=>void}){
-  if(role==='etoser') return <EtoserDashboard setNav={setNav}/>
+function Dashboard({role,demo,liveData,tasks,setNav}:{role:Role;demo:boolean;liveData?:LiveData;tasks:TaskItem[];setNav:(v:NavKey)=>void}){
+  if(role==='etoser') return <EtoserDashboard setNav={setNav} tasks={tasks} liveData={liveData}/>
 
   const facilitator=role==='fasilitator'
   const counts=liveData?.counts
@@ -233,7 +247,7 @@ function Dashboard({role,demo,liveData,setNav}:{role:Role;demo:boolean;liveData?
         </div>
         <div className="activity-table">
           <div className="activity-table-head"><span>Aktivitas</span><span>Target</span><span>Tanggal</span><span>Progress</span><span>Status</span></div>
-          {demoActivities.slice(0,3).map(a=>(
+          {(liveData?.activities?.length ? liveData.activities : demoActivities).slice(0,3).map(a=>(
             <div className="activity-table-row" key={a.id}>
               <div><i className={`activity-dot ${a.tone}`}/><span><strong>{a.title}</strong><small>{a.category}</small></span></div>
               <span>{a.scope}</span>
@@ -248,12 +262,14 @@ function Dashboard({role,demo,liveData,setNav}:{role:Role;demo:boolean;liveData?
   )
 }
 
-function EtoserDashboard({setNav}:{setNav:(v:NavKey)=>void}){
+function EtoserDashboard({setNav,tasks,liveData}:{setNav:(v:NavKey)=>void;tasks:TaskItem[];liveData?:LiveData}){
+  const firstName=liveData?.profile?.full_name?.split(' ')[0]||'Alya'
+  const openTasks=tasks.filter(t=>!['verified','submitted','under_review'].includes(t.statusKey)).length
   return (
     <>
       <div className="page-title-row">
-        <div><span className="eyebrow">KAMIS, 8 OKTOBER 2026</span><h1>Selamat pagi, Alya 👋</h1><p>Ada 2 hal yang perlu kamu selesaikan minggu ini.</p></div>
-        <div className="points-card"><span>Credit Perform</span><strong>920</strong><small>+30 bulan ini</small></div>
+        <div><span className="eyebrow">RUANG ETOSER</span><h1>Selamat datang, {firstName} 👋</h1><p>{openTasks} hal masih perlu kamu selesaikan.</p></div>
+        <div className="points-card"><span>Credit Perform</span><strong>{liveData?.points??920}</strong><small>Riwayat poin transparan</small></div>
       </div>
 
       <div className="etoser-hero">
@@ -273,7 +289,7 @@ function EtoserDashboard({setNav}:{setNav:(v:NavKey)=>void}){
           <button className="text-button" onClick={()=>setNav('tasks')}>Lihat semua</button>
         </div>
         <div className="task-list">
-          {etoserTasks.map(t=>(
+          {tasks.slice(0,4).map(t=>(
             <div className="task-row" key={t.title}>
               <span className={`task-icon ${t.status==='Selesai'?'done':''}`}><FileCheck2/></span>
               <div><strong>{t.title}</strong><span>{t.meta}</span></div>
@@ -355,27 +371,40 @@ function Participants({participants}:{participants:ParticipantItem[]}){
   )
 }
 
-function Tasks({role}:{role:Role}){
+function Tasks({role,participants,tasks,onTask}:{role:Role;participants:ParticipantItem[];tasks:TaskItem[];onTask:(task:TaskItem)=>void}){
   if(role==='etoser'){
+    const columns=[
+      {name:'Belum selesai',keys:['not_started','in_progress','late','revision']},
+      {name:'Menunggu review',keys:['submitted','under_review']},
+      {name:'Selesai',keys:['verified']}
+    ]
     return (
       <>
         <div className="page-title-row">
-          <div><span className="eyebrow">TUGAS SAYA</span><h1>Kewajiban pembinaan</h1><p>Prioritas, deadline, dan riwayat submission ditampilkan secara jelas.</p></div>
+          <div><span className="eyebrow">TUGAS SAYA</span><h1>Kewajiban pembinaan</h1><p>Prioritas, deadline, dan riwayat submission dalam satu alur.</p></div>
         </div>
         <div className="task-board">
-          {['Belum selesai','Menunggu review','Selesai'].map((col,i)=>(
-            <section className="task-column" key={col}>
-              <div className="task-column-head"><h3>{col}</h3><span>{i===0?2:i===1?1:8}</span></div>
-              {etoserTasks.filter((_,idx)=>i===0?idx<2:i===1?idx===2:false).map(t=>(
-                <article className="board-card" key={t.title}>
-                  <span className="activity-category">Workshop</span>
-                  <h4>{t.title}</h4>
-                  <p>{t.meta}</p>
-                  <span className="status warn">{t.status}</span>
-                </article>
-              ))}
-            </section>
-          ))}
+          {columns.map(col=>{
+            const items=tasks.filter(t=>col.keys.includes(t.statusKey))
+            return (
+              <section className="task-column" key={col.name}>
+                <div className="task-column-head"><h3>{col.name}</h3><span>{items.length}</span></div>
+                {items.length===0&&<div className="empty-mini">Tidak ada tugas pada status ini.</div>}
+                {items.map(t=>(
+                  <article className="board-card" key={t.id}>
+                    <span className="activity-category">{t.requirementType==='attendance'?'Presensi':t.requirementType==='journal'?'Jurnal':'Tugas'}</span>
+                    <h4>{t.title}</h4>
+                    <p>{t.activityTitle}</p>
+                    <p>{t.meta}</p>
+                    <div className="board-card-actions">
+                      <span className={`status ${t.statusKey==='late'||t.statusKey==='revision'?'danger':t.statusKey==='verified'?'success':'warn'}`}>{t.status}</span>
+                      <button className="secondary-button" onClick={()=>onTask(t)}>{t.action}</button>
+                    </div>
+                  </article>
+                ))}
+              </section>
+            )
+          })}
         </div>
       </>
     )
@@ -384,19 +413,19 @@ function Tasks({role}:{role:Role}){
   return (
     <>
       <div className="page-title-row">
-        <div><span className="eyebrow">MONITORING</span><h1>Matriks progres otomatis</h1><p>Tampilan familiar seperti spreadsheet, tetapi status berasal langsung dari aktivitas peserta.</p></div>
+        <div><span className="eyebrow">MONITORING</span><h1>Matriks progres otomatis</h1><p>Tampilan familiar seperti spreadsheet, tetapi status berasal dari aktivitas peserta.</p></div>
       </div>
       <section className="panel">
         <div className="monitor-table">
-          <div className="monitor-head"><span>Etoser</span><span>Presensi</span><span>Worksheet</span><span>Jurnal</span><span>Assessment</span><span>Laporan</span></div>
-          {demoParticipants.map((p,i)=>(
+          <div className="monitor-head"><span>Etoser</span><span>Kehadiran</span><span>Tugas</span><span>Credit</span><span>Status</span><span>Wilayah</span></div>
+          {participants.map(p=>(
             <div className="monitor-row" key={p.id}>
               <div><span className="avatar">{p.name.slice(0,2).toUpperCase()}</span><strong>{p.name}</strong></div>
-              <span className="check-ok">✓</span>
-              <span className={i===3?'check-late':'check-ok'}>{i===3?'Terlambat':'✓'}</span>
-              <span className={i===1?'check-warn':'check-ok'}>{i===1?'Belum':'✓'}</span>
-              <span className="check-ok">✓</span>
-              <span className={i===5?'check-warn':'check-ok'}>{i===5?'Belum':'✓'}</span>
+              <span className={p.attendance>=85?'check-ok':'check-warn'}>{p.attendance}%</span>
+              <span className={p.completion>=80?'check-ok':'check-late'}>{p.completion}%</span>
+              <span>{p.points}</span>
+              <span className={`status ${p.status==='Prioritas'?'danger':p.status==='Perlu perhatian'?'warn':'success'}`}>{p.status}</span>
+              <span>{p.region}</span>
             </div>
           ))}
         </div>
@@ -440,110 +469,332 @@ function CalendarView({role,activities}:{role:Role;activities:ActivityItem[]}){
 function CreateActivityModal({demo,close,onCreated}:{demo:boolean;close:()=>void;onCreated:(a:ActivityItem)=>void}){
   const [title,setTitle]=useState('')
   const [category,setCategory]=useState('Workshop')
-  const [scope,setScope]=useState('Angkatan 2025')
+  const [scope,setScope]=useState('cohort_2025')
   const [date,setDate]=useState('2026-10-24')
+  const [requirements,setRequirements]=useState<Record<string,boolean>>({attendance:true,worksheet:true,journal:true})
   const [loading,setLoading]=useState(false)
   const [error,setError]=useState('')
+
+  const scopeLabel:Record<string,string>={
+    all:'Semua Etoser',
+    cohort_2025:'Angkatan 2025',
+    cohort_2026:'Angkatan 2026',
+    own_region:'Wilayah saya'
+  }
+
+  function toggleRequirement(key:string){
+    setRequirements(v=>({...v,[key]:!v[key]}))
+  }
 
   async function save(){
     if(!title.trim()){
       setError('Nama aktivitas wajib diisi.')
       return
     }
+    const selected=Object.entries(requirements).filter(([,v])=>v).map(([k])=>k)
+    if(selected.length===0){
+      setError('Pilih minimal satu kewajiban aktivitas.')
+      return
+    }
 
     setLoading(true)
     setError('')
 
-    if(!demo){
-      const supabase=createClient()
-      if(!supabase){
-        setLoading(false)
-        setError('Supabase belum terkonfigurasi.')
-        return
-      }
-
-      const {data:prof,error:profileError}=await supabase
-        .from('profiles')
-        .select('id,app_role,region_id')
-        .single()
-
-      if(profileError || !prof){
-        setLoading(false)
-        setError('Profil pengguna tidak ditemukan.')
-        return
-      }
-
-      const {data,error:insertError}=await supabase
-        .from('activities')
-        .insert({
-          title,
-          category,
-          description:'Dibuat dari ETOS Pembinaan',
-          delivery_mode:'offline',
-          start_at:`${date}T08:00:00+08:00`,
-          status:'scheduled',
-          created_by:prof.id,
-          owner_region_id:prof.app_role==='fasilitator'?prof.region_id:null
-        })
-        .select('id,title,category,start_at,status')
-        .single()
-
-      if(insertError || !data){
-        setLoading(false)
-        setError(insertError?.message || 'Aktivitas gagal dibuat.')
-        return
-      }
-
-      onCreated({
-        id:data.id,
-        title:data.title,
-        category:data.category,
-        date:new Date(data.start_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}),
-        time:'08.00',
-        scope,
-        status:'Terjadwal',
-        progress:0,
-        tone:'blue'
-      })
-      return
-    }
-
-    onCreated({
+    const display:ActivityItem={
       id:`local-${Date.now()}`,
       title,
       category,
-      date:new Date(date).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}),
-      time:'08.00',
-      scope,
+      date:new Date(`${date}T00:00:00+08:00`).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}),
+      time:'08.00–13.00',
+      scope:scopeLabel[scope]||'Target terpilih',
       status:'Terjadwal',
       progress:0,
-      tone:'blue'
-    })
+      tone:category==='Jurnal'?'teal':category==='Pembinaan Wilayah'?'amber':'blue'
+    }
+
+    if(demo){
+      setLoading(false)
+      onCreated(display)
+      return
+    }
+
+    const supabase=createClient()
+    if(!supabase){
+      setLoading(false)
+      setError('Supabase belum terkonfigurasi.')
+      return
+    }
+
+    const {data:prof,error:profileError}=await supabase
+      .from('profiles')
+      .select('id,app_role,region_id')
+      .single()
+
+    if(profileError||!prof){
+      setLoading(false)
+      setError('Profil pengguna tidak ditemukan.')
+      return
+    }
+
+    const startIso=`${date}T08:00:00+08:00`
+    const endIso=`${date}T13:00:00+08:00`
+    const deadlineDate=new Date(`${date}T23:59:00+08:00`)
+    deadlineDate.setDate(deadlineDate.getDate()+2)
+    const deadlineIso=deadlineDate.toISOString()
+
+    const {data:activity,error:activityError}=await supabase
+      .from('activities')
+      .insert({
+        title,
+        category,
+        description:'Dibuat melalui Activity Builder ETOS Pembinaan.',
+        delivery_mode:'offline',
+        start_at:startIso,
+        end_at:endIso,
+        deadline:deadlineIso,
+        status:'scheduled',
+        created_by:prof.id,
+        owner_region_id:prof.app_role==='fasilitator'?prof.region_id:null
+      })
+      .select('id,title,category,start_at,status')
+      .single()
+
+    if(activityError||!activity){
+      setLoading(false)
+      setError(activityError?.message||'Aktivitas gagal dibuat.')
+      return
+    }
+
+    async function cleanup(message:string){
+      await supabase.from('activities').delete().eq('id',activity.id)
+      setLoading(false)
+      setError(message)
+    }
+
+    let targetPayload:any={activity_id:activity.id,target_type:'all'}
+    if(scope==='cohort_2025'||scope==='cohort_2026'){
+      const year=scope==='cohort_2025'?2025:2026
+      const {data:cohort}=await supabase.from('cohorts').select('id').eq('year',year).single()
+      if(!cohort){ await cleanup('Angkatan target belum tersedia.'); return }
+      targetPayload={activity_id:activity.id,target_type:'cohort',cohort_id:cohort.id}
+    }else if(scope==='own_region'){
+      if(!prof.region_id){ await cleanup('Akun ini belum memiliki wilayah.'); return }
+      targetPayload={activity_id:activity.id,target_type:'region',region_id:prof.region_id}
+    }
+
+    const {error:targetError}=await supabase.from('activity_targets').insert(targetPayload)
+    if(targetError){ await cleanup(targetError.message); return }
+
+    const labels:Record<string,string>={
+      attendance:'Presensi',
+      worksheet:'Worksheet',
+      journal:'Jurnal / Refleksi'
+    }
+    const reqPayload=selected.map((type,index)=>({
+      activity_id:activity.id,
+      title:`${labels[type]} — ${title}`,
+      requirement_type:type,
+      instructions:type==='attendance'
+        ? 'Lakukan check-in pada waktu kegiatan.'
+        : type==='worksheet'
+          ? 'Lengkapi worksheet sesuai instruksi kegiatan.'
+          : 'Tuliskan insight dan refleksi setelah mengikuti kegiatan.',
+      due_at:type==='attendance'?endIso:deadlineIso,
+      sort_order:index+1
+    }))
+
+    const {error:reqError}=await supabase.from('activity_requirements').insert(reqPayload)
+    if(reqError){ await cleanup(reqError.message); return }
+
+    if(selected.includes('attendance')){
+      const {error:sessionError}=await supabase.from('attendance_sessions').insert({
+        activity_id:activity.id,
+        title:`Presensi — ${title}`,
+        opens_at:startIso,
+        closes_at:endIso,
+        active:true
+      })
+      if(sessionError){ await cleanup(sessionError.message); return }
+    }
+
+    const {error:assignmentError}=await supabase.rpc('generate_activity_assignments',{p_activity_id:activity.id})
+    if(assignmentError){ await cleanup(assignmentError.message); return }
+
+    setLoading(false)
+    onCreated({...display,id:activity.id})
   }
 
   return (
     <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
       <div className="modal">
         <div className="modal-head">
-          <div><span className="eyebrow">AKTIVITAS BARU</span><h2>Buat aktivitas pembinaan</h2><p>Sistem akan menggunakan aktivitas ini sebagai pusat agenda, tugas, dan monitoring.</p></div>
+          <div><span className="eyebrow">ACTIVITY BUILDER</span><h2>Buat aktivitas pembinaan</h2><p>Satu aktivitas akan menghasilkan agenda, kewajiban peserta, dan monitoring otomatis.</p></div>
           <button className="icon-button" onClick={close}><X/></button>
         </div>
         <div className="modal-form">
           <label>Nama aktivitas<input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Contoh: Workshop Community Empowerment Vol. 3"/></label>
           <div className="form-grid">
             <label>Kategori<select value={category} onChange={e=>setCategory(e.target.value)}><option>Workshop</option><option>Pembinaan Nasional</option><option>Pembinaan Wilayah</option><option>Jurnal</option><option>Assessment</option></select></label>
-            <label>Target<select value={scope} onChange={e=>setScope(e.target.value)}><option>Angkatan 2025</option><option>Semua Etoser</option><option>Wilayah Palu</option><option>Angkatan 2026</option></select></label>
+            <label>Target<select value={scope} onChange={e=>setScope(e.target.value)}><option value="cohort_2025">Angkatan 2025</option><option value="cohort_2026">Angkatan 2026</option><option value="all">Semua Etoser</option><option value="own_region">Wilayah saya</option></select></label>
           </div>
           <label>Tanggal kegiatan<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
           <div className="requirement-preview">
-            <strong>Requirement yang dapat ditambahkan setelah aktivitas dibuat</strong>
-            <div><span>Presensi</span><span>Worksheet</span><span>Jurnal / Refleksi</span><span>Upload File</span></div>
+            <strong>Kewajiban peserta</strong>
+            <p>Pilih apa saja yang harus diselesaikan Etoser pada aktivitas ini.</p>
+            <div>
+              {[
+                ['attendance','Presensi'],
+                ['worksheet','Worksheet'],
+                ['journal','Jurnal / Refleksi']
+              ].map(([key,label])=>(
+                <button type="button" key={key} onClick={()=>toggleRequirement(key)} className={`requirement-choice ${requirements[key]?'active':''}`}>
+                  {requirements[key]?'✓ ':''}{label}
+                </button>
+              ))}
+            </div>
           </div>
           {error&&<div className="form-error">{error}</div>}
         </div>
         <div className="modal-actions">
           <button className="secondary-button" onClick={close}>Batal</button>
-          <button className="primary-button" onClick={save} disabled={loading}><Plus size={17}/>{loading?'Menyimpan...':'Buat aktivitas'}</button>
+          <button className="primary-button" onClick={save} disabled={loading}><Plus size={17}/>{loading?'Membentuk assignment...':'Buat & bagikan aktivitas'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TaskActionModal({demo,task,profileId,close,onUpdated}:{demo:boolean;task:TaskItem;profileId?:string;close:()=>void;onUpdated:(id:string,status:string,statusKey:string)=>void}){
+  const [text,setText]=useState('')
+  const [loading,setLoading]=useState(false)
+  const [error,setError]=useState('')
+
+  async function submit(){
+    if(task.statusKey==='verified'||task.statusKey==='submitted'||task.statusKey==='under_review'){
+      close()
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    if(demo){
+      setLoading(false)
+      onUpdated(task.id,task.requirementType==='attendance'?'Selesai':'Menunggu review',task.requirementType==='attendance'?'verified':'submitted')
+      return
+    }
+
+    const supabase=createClient()
+    if(!supabase||!profileId||!task.assignmentId||!task.activityId){
+      setLoading(false)
+      setError('Data tugas belum lengkap.')
+      return
+    }
+
+    if(task.requirementType==='attendance'){
+      const {data:session,error:sessionError}=await supabase
+        .from('attendance_sessions')
+        .select('id,opens_at,closes_at')
+        .eq('activity_id',task.activityId)
+        .eq('active',true)
+        .maybeSingle()
+
+      if(sessionError||!session){
+        setLoading(false)
+        setError('Sesi presensi belum dibuka oleh pengelola.')
+        return
+      }
+
+      const now=Date.now()
+      if(session.opens_at&&now<new Date(session.opens_at).getTime()){
+        setLoading(false)
+        setError('Presensi belum dibuka.')
+        return
+      }
+      if(session.closes_at&&now>new Date(session.closes_at).getTime()){
+        setLoading(false)
+        setError('Waktu presensi sudah ditutup.')
+        return
+      }
+
+      const {error:attendanceError}=await supabase.from('attendance_records').upsert({
+        session_id:session.id,
+        activity_id:task.activityId,
+        profile_id:profileId,
+        status:'present',
+        checked_in_at:new Date().toISOString()
+      },{onConflict:'session_id,profile_id'})
+
+      if(attendanceError){
+        setLoading(false)
+        setError(attendanceError.message)
+        return
+      }
+
+      setLoading(false)
+      onUpdated(task.id,'Selesai','verified')
+      return
+    }
+
+    if(!text.trim()){
+      setLoading(false)
+      setError('Isi jawaban atau refleksi terlebih dahulu.')
+      return
+    }
+
+    const {data:versions}=await supabase
+      .from('submissions')
+      .select('version')
+      .eq('assignment_id',task.assignmentId)
+      .order('version',{ascending:false})
+      .limit(1)
+
+    const version=((versions?.[0]?.version as number|undefined)||0)+1
+    const {error:submissionError}=await supabase.from('submissions').insert({
+      assignment_id:task.assignmentId,
+      profile_id:profileId,
+      version,
+      response_text:text,
+      response_data:{source:'web_app'},
+      status:'submitted',
+      submitted_at:new Date().toISOString()
+    })
+
+    if(submissionError){
+      setLoading(false)
+      setError(submissionError.message)
+      return
+    }
+
+    setLoading(false)
+    onUpdated(task.id,'Menunggu review','submitted')
+  }
+
+  return (
+    <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
+      <div className="modal task-modal">
+        <div className="modal-head">
+          <div><span className="eyebrow">{task.requirementType==='attendance'?'PRESENSI':'SUBMISSION'}</span><h2>{task.title}</h2><p>{task.activityTitle} • {task.meta}</p></div>
+          <button className="icon-button" onClick={close}><X/></button>
+        </div>
+        <div className="modal-form">
+          {task.instructions&&<div className="instruction-box">{task.instructions}</div>}
+          {task.requirementType==='attendance' ? (
+            <div className="checkin-box"><strong>Check-in kegiatan</strong><p>Tekan tombol di bawah saat sesi presensi sedang dibuka.</p></div>
+          ) : (
+            <label>Jawaban / refleksi
+              <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Tuliskan jawaban, insight, atau refleksi di sini..." rows={8}/>
+            </label>
+          )}
+          {error&&<div className="form-error">{error}</div>}
+        </div>
+        <div className="modal-actions">
+          <button className="secondary-button" onClick={close}>Tutup</button>
+          {!['verified','submitted','under_review'].includes(task.statusKey)&&(
+            <button className="primary-button" onClick={submit} disabled={loading}>
+              {loading?'Menyimpan...':task.requirementType==='attendance'?'Check-in sekarang':'Kirim tugas'}
+            </button>
+          )}
         </div>
       </div>
     </div>
