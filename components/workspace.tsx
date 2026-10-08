@@ -565,8 +565,11 @@ function CreateActivityModal({demo,close,onCreated}:{demo:boolean;close:()=>void
       return
     }
 
+    const db=supabase
+    const activityId=activity.id
+
     async function cleanup(message:string){
-      await supabase.from('activities').delete().eq('id',activity.id)
+      await db.from('activities').delete().eq('id',activityId)
       setLoading(false)
       setError(message)
     }
