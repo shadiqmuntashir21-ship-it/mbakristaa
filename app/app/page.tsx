@@ -56,7 +56,13 @@ export default async function AppPage(){
     {data:attendanceRows},
     {data:taskRows},
     {data:pointRows},
-    {data:reviewRows}
+    {data:reviewRows},
+    {data:notificationRows},
+    {data:reportRows},
+    {data:managementRows},
+    {data:regionRows},
+    {data:cohortRows},
+    {data:auditRows}
   ] = await Promise.all([
     supabase.from('profiles').select('*',{count:'exact',head:true}).eq('app_role','etoser').eq('active',true),
     supabase.from('regions').select('*',{count:'exact',head:true}).eq('active',true),
@@ -77,7 +83,13 @@ export default async function AppPage(){
       .select('id,status,submitted_at,response_text,profiles(full_name,regions(name)),assignments(activity_requirements(title),activities(title))')
       .in('status',['submitted','under_review'])
       .order('submitted_at',{ascending:true})
-      .limit(30)
+      .limit(30),
+    supabase.from('notifications').select('id,type,title,message,href,read_at,created_at').eq('profile_id',profile.id).order('created_at',{ascending:false}).limit(20),
+    supabase.from('monthly_reports').select('id,profile_id,period_month,status,submitted_at,feedback,reviewed_at,content,profiles(full_name,participant_code,regions(name))').order('period_month',{ascending:false}).limit(120),
+    supabase.from('profiles').select('id,full_name,email,participant_code,app_role,active,region_id,cohort_id,regions(name),cohorts(year)').order('full_name').limit(300),
+    supabase.from('regions').select('id,name,code').eq('active',true).order('name'),
+    supabase.from('cohorts').select('id,year,label').eq('active',true).order('year',{ascending:false}),
+    supabase.from('audit_logs').select('id,actor_profile_id,action,entity_type,entity_id,created_at').order('created_at',{ascending:false}).limit(80)
   ])
 
   const allAssignments=assignmentRows||[]
@@ -173,6 +185,25 @@ export default async function AppPage(){
     status:row.status
   }))
 
+  const notifications=(notificationRows||[]).map((row:any)=>({id:row.id,type:row.type,title:row.title,message:row.message,href:row.href,readAt:row.read_at,createdAt:row.created_at}))
+  const reports=(reportRows||[]).map((row:any)=>({
+    id:row.id,profileId:row.profile_id,profileName:row.profiles?.full_name||profile.full_name,
+    participantCode:row.profiles?.participant_code||'-',region:row.profiles?.regions?.name||'-',
+    periodMonth:row.period_month,status:row.status,submittedAt:row.submitted_at,feedback:row.feedback,
+    reviewedAt:row.reviewed_at,content:(row.content||{}) as Record<string,unknown>
+  }))
+  const managedProfiles=(managementRows||[]).map((row:any)=>({
+    id:row.id,fullName:row.full_name,email:row.email,participantCode:row.participant_code,role:row.app_role,
+    active:row.active,regionId:row.region_id,cohortId:row.cohort_id,region:row.regions?.name||null,cohort:row.cohorts?.year||null
+  }))
+  const regionsData=(regionRows||[]).map((row:any)=>({id:row.id,name:row.name,code:row.code}))
+  const cohortsData=(cohortRows||[]).map((row:any)=>({id:row.id,year:row.year,label:row.label}))
+  const actorNameMap=new Map(managedProfiles.map((p:any)=>[p.id,p.fullName]))
+  const auditLogs=(auditRows||[]).map((row:any)=>({
+    id:row.id,actorName:actorNameMap.get(row.actor_profile_id)||'Sistem',action:row.action,
+    entityType:row.entity_type,entityId:row.entity_id,createdAt:row.created_at
+  }))
+
   const liveData={
     profile:{
       id:profile.id,
@@ -192,7 +223,13 @@ export default async function AppPage(){
     participants:participantsData,
     tasks,
     points,
-    reviewQueue
+    reviewQueue,
+    notifications,
+    reports,
+    managedProfiles,
+    regions:regionsData,
+    cohorts:cohortsData,
+    auditLogs
   }
 
   return <Workspace liveData={liveData} initialRole={normalizeRole(profile.app_role)}/>
