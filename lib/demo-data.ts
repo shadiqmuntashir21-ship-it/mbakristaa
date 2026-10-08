@@ -24,6 +24,18 @@ export type ParticipantItem = {
   status:string
 }
 
+export type ReviewItem = {
+  id:string
+  submissionId:string
+  profileName:string
+  region:string
+  activityTitle:string
+  taskTitle:string
+  submittedAt:string
+  responseText:string
+  status:string
+}
+
 export type TaskItem = {
   id:string
   assignmentId?:string
@@ -83,4 +95,18 @@ export const etoserTasks:TaskItem[] = [
     title:'Jurnal Interaksi Masyarakat', requirementType:'journal',
     meta:'Deadline 15 Okt • 23.59', status:'Selesai', statusKey:'verified', action:'Lihat'
   },
+]
+
+
+export const demoReviewQueue:ReviewItem[] = [
+  {
+    id:'r1', submissionId:'sub-1', profileName:'Alya Rahma', region:'Palu',
+    activityTitle:'Workshop Community Empowerment Vol. 2', taskTitle:'Worksheet Workshop CE Vol. 2',
+    submittedAt:'8 Okt • 08.32', responseText:'Saya memetakan masalah komunitas berdasarkan kebutuhan nyata, lalu menyusun rencana tindak lanjut bersama stakeholder lokal.', status:'submitted'
+  },
+  {
+    id:'r2', submissionId:'sub-2', profileName:'Nabila Putri', region:'Makassar',
+    activityTitle:'Jurnal Interaksi Masyarakat', taskTitle:'Refleksi Interaksi Masyarakat',
+    submittedAt:'8 Okt • 07.48', responseText:'Interaksi hari ini memberi insight bahwa pendekatan kolaboratif perlu dimulai dari mendengar kebutuhan warga sebelum merancang program.', status:'submitted'
+  }
 ]
