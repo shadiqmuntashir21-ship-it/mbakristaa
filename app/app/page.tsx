@@ -55,7 +55,8 @@ export default async function AppPage(){
     {data:progressRows},
     {data:attendanceRows},
     {data:taskRows},
-    {data:pointRows}
+    {data:pointRows},
+    {data:reviewRows}
   ] = await Promise.all([
     supabase.from('profiles').select('*',{count:'exact',head:true}).eq('app_role','etoser').eq('active',true),
     supabase.from('regions').select('*',{count:'exact',head:true}).eq('active',true),
@@ -70,7 +71,13 @@ export default async function AppPage(){
       .select('id,activity_id,status,due_at,activity_requirements(title,requirement_type,instructions),activities(title,start_at)')
       .eq('profile_id',profile.id)
       .order('due_at',{ascending:true}),
-    supabase.from('point_transactions').select('points').eq('profile_id',profile.id)
+    supabase.from('point_transactions').select('points').eq('profile_id',profile.id),
+    supabase
+      .from('submissions')
+      .select('id,status,submitted_at,response_text,profiles(full_name,regions(name)),assignments(activity_requirements(title),activities(title))')
+      .in('status',['submitted','under_review'])
+      .order('submitted_at',{ascending:true})
+      .limit(30)
   ])
 
   const allAssignments=assignmentRows||[]
@@ -152,6 +159,20 @@ export default async function AppPage(){
 
   const points=(pointRows||[]).reduce((sum,row)=>sum+Number(row.points||0),0)
 
+  const reviewQueue=(reviewRows||[]).map((row:any)=>({
+    id:row.id,
+    submissionId:row.id,
+    profileName:row.profiles?.full_name||'Etoser',
+    region:row.profiles?.regions?.name||'-',
+    activityTitle:row.assignments?.activities?.title||'Aktivitas Pembinaan',
+    taskTitle:row.assignments?.activity_requirements?.title||'Submission',
+    submittedAt:row.submitted_at
+      ? new Date(row.submitted_at).toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Makassar'})
+      : '-',
+    responseText:row.response_text||'Tidak ada jawaban teks.',
+    status:row.status
+  }))
+
   const liveData={
     profile:{
       id:profile.id,
@@ -170,7 +191,8 @@ export default async function AppPage(){
     activities,
     participants:participantsData,
     tasks,
-    points
+    points,
+    reviewQueue
   }
 
   return <Workspace liveData={liveData} initialRole={normalizeRole(profile.app_role)}/>
