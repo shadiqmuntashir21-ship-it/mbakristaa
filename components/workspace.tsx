@@ -81,6 +81,18 @@ export function Workspace({
   )
 
   async function logout(){
+    if(demo&&lockRole){
+      const portal=effectiveRole==='etoser'?'etoser':effectiveRole==='fasilitator'?'fasil':'pusat'
+      try{
+        await fetch('/api/demo-logout',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({portal})
+        })
+      }catch{}
+      window.location.href='/' + portal
+      return
+    }
     const supabase=createClient()
     if(supabase) await supabase.auth.signOut()
     window.location.href='/'
