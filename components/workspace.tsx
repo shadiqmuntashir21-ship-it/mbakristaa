@@ -7,7 +7,7 @@ import {
   Sparkles, Users2, X
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { attentionItems, demoActivities, demoParticipants, etoserTasks, type ActivityItem, type ParticipantItem, type Role, type TaskItem } from '@/lib/demo-data'
+import { attentionItems, demoActivities, demoParticipants, demoReviewQueue, etoserTasks, type ActivityItem, type ParticipantItem, type ReviewItem, type Role, type TaskItem } from '@/lib/demo-data'
 
 type LiveData = {
   profile?: { id:string; full_name:string; app_role:string; region?:string|null; cohort?:string|null }
@@ -16,6 +16,7 @@ type LiveData = {
   participants?: ParticipantItem[]
   tasks?: TaskItem[]
   points?: number
+  reviewQueue?: ReviewItem[]
 }
 type NavKey = 'dashboard'|'activities'|'participants'|'tasks'|'calendar'
 
@@ -40,6 +41,7 @@ export function Workspace({
   const [mobile,setMobile] = useState(false)
   const [modal,setModal] = useState(false)
   const [selectedTask,setSelectedTask] = useState<TaskItem|null>(null)
+  const [selectedReview,setSelectedReview] = useState<ReviewItem|null>(null)
   const [activities,setActivities] = useState<ActivityItem[]>(liveData?.activities?.length ? liveData.activities : demoActivities)
   const [tasks,setTasks] = useState<TaskItem[]>(liveData?.tasks?.length ? liveData.tasks : etoserTasks)
 
@@ -136,7 +138,7 @@ export function Workspace({
           {nav==='dashboard' && <Dashboard role={effectiveRole} demo={demo} liveData={liveData} tasks={tasks} setNav={setNav}/>}
           {nav==='activities' && <Activities role={effectiveRole} activities={activities} onCreate={()=>setModal(true)}/>}
           {nav==='participants' && effectiveRole!=='etoser' && <Participants participants={filteredParticipants}/>}
-          {nav==='tasks' && <Tasks role={effectiveRole} participants={filteredParticipants} tasks={tasks} onTask={setSelectedTask}/>}
+          {nav==='tasks' && <Tasks role={effectiveRole} participants={filteredParticipants} tasks={tasks} reviewQueue={liveData?.reviewQueue?.length?liveData.reviewQueue:demoReviewQueue} profileId={liveData?.profile?.id} demo={demo} onTask={setSelectedTask} onReview={setSelectedReview}/>}
           {nav==='calendar' && <CalendarView role={effectiveRole} activities={activities}/>}
         </div>
       </main>
@@ -146,6 +148,15 @@ export function Workspace({
           demo={demo}
           close={()=>setModal(false)}
           onCreated={a=>{setActivities(v=>[a,...v]);setModal(false)}}
+        />
+      )}
+      {selectedReview&&(
+        <ReviewModal
+          demo={demo}
+          review={selectedReview}
+          reviewerId={liveData?.profile?.id}
+          close={()=>setSelectedReview(null)}
+          onUpdated={()=>setSelectedReview(null)}
         />
       )}
       {selectedTask&&(
@@ -343,6 +354,7 @@ function Activities({role,activities,onCreate}:{role:Role;activities:ActivityIte
 }
 
 function Participants({participants}:{participants:ParticipantItem[]}){
+  const [selected,setSelected]=useState<ParticipantItem|null>(null)
   return (
     <>
       <div className="page-title-row">
@@ -363,15 +375,29 @@ function Participants({participants}:{participants:ParticipantItem[]}){
               <div><span>Tugas</span><strong>{p.completion}%</strong></div>
               <div><span>Credit</span><strong>{p.points}</strong></div>
             </div>
-            <button className="secondary-button full">Buka profil 360°</button>
+            <button className="secondary-button full" onClick={()=>setSelected(p)}>Buka profil 360°</button>
           </article>
         ))}
       </div>
+      {selected&&<ParticipantDetailModal participant={selected} close={()=>setSelected(null)}/>}
     </>
   )
 }
 
-function Tasks({role,participants,tasks,onTask}:{role:Role;participants:ParticipantItem[];tasks:TaskItem[];onTask:(task:TaskItem)=>void}){
+function Tasks({role,participants,tasks,reviewQueue,profileId,demo,onTask,onReview}:{role:Role;participants:ParticipantItem[];tasks:TaskItem[];reviewQueue:ReviewItem[];profileId?:string;demo:boolean;onTask:(task:TaskItem)=>void;onReview:(review:ReviewItem)=>void}){
+  function exportMonitoring(){
+    const header=['Nama','Kode','Wilayah','Angkatan','Kehadiran','Tugas','Credit','Status']
+    const rows=participants.map(p=>[p.name,p.code,p.region,p.cohort,`${p.attendance}%`,`${p.completion}%`,String(p.points),p.status])
+    const csv=[header,...rows].map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'})
+    const url=URL.createObjectURL(blob)
+    const a=document.createElement('a')
+    a.href=url
+    a.download='monitoring-etos.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   if(role==='etoser'){
     const columns=[
       {name:'Belum selesai',keys:['not_started','in_progress','late','revision']},
@@ -414,6 +440,7 @@ function Tasks({role,participants,tasks,onTask}:{role:Role;participants:Particip
     <>
       <div className="page-title-row">
         <div><span className="eyebrow">MONITORING</span><h1>Matriks progres otomatis</h1><p>Tampilan familiar seperti spreadsheet, tetapi status berasal dari aktivitas peserta.</p></div>
+        <button className="secondary-button" onClick={exportMonitoring}>Export CSV</button>
       </div>
       <section className="panel">
         <div className="monitor-table">
@@ -430,7 +457,54 @@ function Tasks({role,participants,tasks,onTask}:{role:Role;participants:Particip
           ))}
         </div>
       </section>
+
+      <section className="panel review-panel">
+        <div className="panel-head">
+          <div><span className="eyebrow">ANTRIAN REVIEW</span><h2>Submission menunggu verifikasi</h2></div>
+          <span className="status warn">{reviewQueue.length} submission</span>
+        </div>
+        {reviewQueue.length===0&&<div className="empty-review">Tidak ada submission yang menunggu review.</div>}
+        <div className="review-list">
+          {reviewQueue.map(item=>(
+            <div className="review-row" key={item.id}>
+              <span className="avatar">{item.profileName.split(' ').map(v=>v[0]).slice(0,2).join('')}</span>
+              <div className="review-copy">
+                <strong>{item.profileName}</strong>
+                <span>{item.region} • {item.taskTitle}</span>
+                <small>{item.activityTitle} • {item.submittedAt}</small>
+              </div>
+              <button className="secondary-button" onClick={()=>onReview(item)}>Review</button>
+            </div>
+          ))}
+        </div>
+      </section>
     </>
+  )
+}
+
+function ParticipantDetailModal({participant,close}:{participant:ParticipantItem;close:()=>void}){
+  return (
+    <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
+      <div className="modal participant-detail-modal">
+        <div className="modal-head">
+          <div><span className="eyebrow">PROFIL 360° ETOSER</span><h2>{participant.name}</h2><p>{participant.code} • {participant.region} • Angkatan {participant.cohort}</p></div>
+          <button className="icon-button" onClick={close}><X/></button>
+        </div>
+        <div className="profile-detail-body">
+          <div className="profile-score-grid">
+            <div><span>Kehadiran</span><strong>{participant.attendance}%</strong></div>
+            <div><span>Tugas selesai</span><strong>{participant.completion}%</strong></div>
+            <div><span>Credit Perform</span><strong>{participant.points}</strong></div>
+          </div>
+          <div className="profile-timeline">
+            <strong>Ringkasan pembinaan</strong>
+            <p>Status saat ini: <span className={`status ${participant.status==='Prioritas'?'danger':participant.status==='Perlu perhatian'?'warn':'success'}`}>{participant.status}</span></p>
+            <p>Seluruh aktivitas, presensi, worksheet, jurnal, assessment, laporan, dan feedback akan membentuk histori peserta di profil ini.</p>
+          </div>
+        </div>
+        <div className="modal-actions"><button className="primary-button" onClick={close}>Tutup</button></div>
+      </div>
+    </div>
   )
 }
 
@@ -661,6 +735,63 @@ function CreateActivityModal({demo,close,onCreated}:{demo:boolean;close:()=>void
         <div className="modal-actions">
           <button className="secondary-button" onClick={close}>Batal</button>
           <button className="primary-button" onClick={save} disabled={loading}><Plus size={17}/>{loading?'Membentuk assignment...':'Buat & bagikan aktivitas'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ReviewModal({demo,review,reviewerId,close,onUpdated}:{demo:boolean;review:ReviewItem;reviewerId?:string;close:()=>void;onUpdated:()=>void}){
+  const [feedback,setFeedback]=useState('')
+  const [loading,setLoading]=useState(false)
+  const [error,setError]=useState('')
+
+  async function decide(decision:'verified'|'revision'){
+    setLoading(true)
+    setError('')
+    if(demo){
+      setLoading(false)
+      onUpdated()
+      return
+    }
+    const supabase=createClient()
+    if(!supabase||!reviewerId){
+      setLoading(false)
+      setError('Profil reviewer tidak tersedia.')
+      return
+    }
+    const {error:insertError}=await supabase.from('reviews').insert({
+      submission_id:review.submissionId,
+      reviewer_id:reviewerId,
+      decision,
+      feedback:feedback.trim()||null
+    })
+    if(insertError){
+      setLoading(false)
+      setError(insertError.message)
+      return
+    }
+    setLoading(false)
+    onUpdated()
+  }
+
+  return (
+    <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
+      <div className="modal review-modal">
+        <div className="modal-head">
+          <div><span className="eyebrow">REVIEW SUBMISSION</span><h2>{review.taskTitle}</h2><p>{review.profileName} • {review.region} • {review.submittedAt}</p></div>
+          <button className="icon-button" onClick={close}><X/></button>
+        </div>
+        <div className="modal-form">
+          <div className="submission-answer"><span>Jawaban Etoser</span><p>{review.responseText}</p></div>
+          <label>Feedback fasilitator / reviewer
+            <textarea rows={5} value={feedback} onChange={e=>setFeedback(e.target.value)} placeholder="Berikan catatan, penguatan, atau instruksi revisi..."/>
+          </label>
+          {error&&<div className="form-error">{error}</div>}
+        </div>
+        <div className="modal-actions">
+          <button className="secondary-button" onClick={()=>decide('revision')} disabled={loading}>Minta revisi</button>
+          <button className="primary-button" onClick={()=>decide('verified')} disabled={loading}>{loading?'Menyimpan...':'Verifikasi submission'}</button>
         </div>
       </div>
     </div>
