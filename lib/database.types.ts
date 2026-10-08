@@ -71,6 +71,13 @@ export type Database = {
             foreignKeyName: "activities_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "activities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -184,6 +191,13 @@ export type Database = {
             foreignKeyName: "activity_targets_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "activity_targets_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -237,6 +251,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "activities"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "assignments_profile_id_fkey"
@@ -300,6 +321,13 @@ export type Database = {
             foreignKeyName: "attendance_records_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "attendance_records_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -309,6 +337,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "attendance_sessions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "attendance_records_verified_by_fkey"
@@ -389,6 +424,13 @@ export type Database = {
           payload?: Json
         }
         Relationships: [
+          {
+            foreignKeyName: "audit_logs_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "audit_logs_actor_profile_id_fkey"
             columns: ["actor_profile_id"]
@@ -474,8 +516,22 @@ export type Database = {
             foreignKeyName: "documents_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "documents_profile_id_fkey"
@@ -538,8 +594,22 @@ export type Database = {
             foreignKeyName: "monthly_reports_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "monthly_reports_reviewer_id_fkey"
@@ -582,6 +652,13 @@ export type Database = {
           type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "notifications_profile_id_fkey"
             columns: ["profile_id"]
@@ -634,8 +711,22 @@ export type Database = {
             foreignKeyName: "point_transactions_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "point_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "point_transactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "point_transactions_profile_id_fkey"
@@ -802,6 +893,13 @@ export type Database = {
             foreignKeyName: "regional_activity_plans_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "regional_activity_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -864,6 +962,13 @@ export type Database = {
           submission_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "reviews_reviewer_id_fkey"
             columns: ["reviewer_id"]
@@ -967,6 +1072,13 @@ export type Database = {
             foreignKeyName: "submissions_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "participant_progress_summary"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "submissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -974,7 +1086,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      participant_progress_summary: {
+        Row: {
+          cohort_id: string | null
+          completed_or_submitted: number | null
+          credit_points: number | null
+          full_name: string | null
+          needs_attention: number | null
+          participant_code: string | null
+          profile_id: string | null
+          region_id: string | null
+          total_assignments: number | null
+          verified_assignments: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       generate_activity_assignments: {
