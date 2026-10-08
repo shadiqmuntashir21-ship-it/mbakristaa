@@ -575,7 +575,7 @@ function ParticipantDetailModal({participant,close}:{participant:ParticipantItem
 
 function MonthlyReports({role,profileId,reports,setReports,demo}:{role:Role;profileId?:string;reports:ReportItem[];setReports:React.Dispatch<React.SetStateAction<ReportItem[]>>;demo:boolean}){
   const now=new Date()
-  const defaultPeriod=\`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01\`
+  const defaultPeriod=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`
   const [period,setPeriod]=useState(defaultPeriod)
   const [summary,setSummary]=useState('')
   const [achievement,setAchievement]=useState('')
@@ -600,7 +600,7 @@ function MonthlyReports({role,profileId,reports,setReports,demo}:{role:Role;prof
     setLoading(true);setError('')
     const payload={profile_id:profileId,period_month:period,content:{summary,achievement,obstacle,follow_up:followUp},status,submitted_at:status==='submitted'?new Date().toISOString():null}
     if(demo){
-      const next:ReportItem={id:ownReport?.id||\`demo-report-${period}\`,profileId,profileName:'Alya Rahma',participantCode:'ETS-PAL-2501',region:'Palu',periodMonth:period,status,submittedAt:payload.submitted_at,feedback:ownReport?.feedback||null,reviewedAt:null,content:payload.content}
+      const next:ReportItem={id:ownReport?.id||`demo-report-${period}`,profileId,profileName:'Alya Rahma',participantCode:'ETS-PAL-2501',region:'Palu',periodMonth:period,status,submittedAt:payload.submitted_at,feedback:ownReport?.feedback||null,reviewedAt:null,content:payload.content}
       setReports(items=>[next,...items.filter(r=>r.id!==next.id)]);setLoading(false);return
     }
     const supabase=createClient()
@@ -617,8 +617,8 @@ function MonthlyReports({role,profileId,reports,setReports,demo}:{role:Role;prof
       <div className="page-title-row"><div><span className="eyebrow">LAPORAN BULANAN</span><h1>Catatan perkembangan pembinaan</h1><p>Simpan progres, tantangan, dan tindak lanjut setiap bulan dalam satu histori.</p></div></div>
       <div className="report-layout">
         <section className="panel report-editor">
-          <div className="panel-head"><div><span className="eyebrow">EDITOR LAPORAN</span><h2>Periode laporan</h2></div><input type="month" value={period.slice(0,7)} onChange={e=>setPeriod(\`${e.target.value}-01\`)}/></div>
-          {ownReport?.feedback&&<div className={\`report-feedback ${ownReport.status==='revision'?'warn':''}\`}><strong>Feedback reviewer</strong><p>{ownReport.feedback}</p></div>}
+          <div className="panel-head"><div><span className="eyebrow">EDITOR LAPORAN</span><h2>Periode laporan</h2></div><input type="month" value={period.slice(0,7)} onChange={e=>setPeriod(`${e.target.value}-01`)}/></div>
+          {ownReport?.feedback&&<div className={`report-feedback ${ownReport.status==='revision'?'warn':''}`}><strong>Feedback reviewer</strong><p>{ownReport.feedback}</p></div>}
           <div className="report-form">
             <label>Ringkasan pembinaan<textarea rows={5} value={summary} onChange={e=>setSummary(e.target.value)} placeholder="Apa proses pembinaan yang paling penting bulan ini?"/></label>
             <label>Capaian / perkembangan<textarea rows={4} value={achievement} onChange={e=>setAchievement(e.target.value)} placeholder="Tuliskan capaian utama..."/></label>
@@ -631,7 +631,7 @@ function MonthlyReports({role,profileId,reports,setReports,demo}:{role:Role;prof
         <section className="panel report-history">
           <div className="panel-head"><div><span className="eyebrow">HISTORI</span><h2>Laporan sebelumnya</h2></div></div>
           {ownReports.length===0&&<div className="empty-review">Belum ada laporan tersimpan.</div>}
-          {ownReports.map(r=><div className="report-history-row" key={r.id}><div><strong>{new Date(r.periodMonth).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</strong><span>{String(r.content.summary||'Belum ada ringkasan').slice(0,85)}</span></div><span className={\`status ${r.status==='revision'?'danger':r.status==='reviewed'||r.status==='completed'?'success':'warn'}\`}>{r.status}</span></div>)}
+          {ownReports.map(r=><div className="report-history-row" key={r.id}><div><strong>{new Date(r.periodMonth).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</strong><span>{String(r.content.summary||'Belum ada ringkasan').slice(0,85)}</span></div><span className={`status ${r.status==='revision'?'danger':r.status==='reviewed'||r.status==='completed'?'success':'warn'}`}>{r.status}</span></div>)}
         </section>
       </div>
     </>
@@ -642,7 +642,7 @@ function MonthlyReports({role,profileId,reports,setReports,demo}:{role:Role;prof
     <div className="page-title-row"><div><span className="eyebrow">LAPORAN ETOSER</span><h1>Review laporan bulanan</h1><p>Pantau laporan perkembangan tanpa memindahkan data ke file rekap lain.</p></div></div>
     <section className="panel"><div className="review-list">
       {queue.length===0&&<div className="empty-review">Belum ada laporan yang perlu ditampilkan.</div>}
-      {queue.map(r=><div className="review-row" key={r.id}><span className="avatar">{r.profileName.split(' ').map(v=>v[0]).slice(0,2).join('')}</span><div className="review-copy"><strong>{r.profileName}</strong><span>{r.region} • {new Date(r.periodMonth).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</span><small>{String(r.content.summary||'Belum ada ringkasan').slice(0,110)}</small></div><span className={\`status ${r.status==='revision'?'danger':r.status==='reviewed'||r.status==='completed'?'success':'warn'}\`}>{r.status}</span><button className="secondary-button" onClick={()=>setReviewing(r)}>Buka</button></div>)}
+      {queue.map(r=><div className="review-row" key={r.id}><span className="avatar">{r.profileName.split(' ').map(v=>v[0]).slice(0,2).join('')}</span><div className="review-copy"><strong>{r.profileName}</strong><span>{r.region} • {new Date(r.periodMonth).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</span><small>{String(r.content.summary||'Belum ada ringkasan').slice(0,110)}</small></div><span className={`status ${r.status==='revision'?'danger':r.status==='reviewed'||r.status==='completed'?'success':'warn'}`}>{r.status}</span><button className="secondary-button" onClick={()=>setReviewing(r)}>Buka</button></div>)}
     </div></section>
     {reviewing&&<ReportReviewModal demo={demo} report={reviewing} reviewerId={profileId} close={()=>setReviewing(null)} onUpdated={updated=>{setReports(items=>items.map(r=>r.id===updated.id?updated:r));setReviewing(null)}}/>}
   </>
@@ -681,7 +681,7 @@ function UserManagement({currentProfileId,profiles,setProfiles,regions,setRegion
   async function addRegion(){
     const name=regionName.trim();if(!name)return
     const code=name.toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_|_$/g,'')
-    if(demo){setRegions(items=>[...items,{id:\`demo-region-${Date.now()}\`,name,code}]);setRegionName('');return}
+    if(demo){setRegions(items=>[...items,{id:`demo-region-${Date.now()}`,name,code}]);setRegionName('');return}
     const supabase=createClient();if(!supabase)return
     const {data,error}=await supabase.from('regions').insert({name,code}).select('id,name,code').single()
     if(error||!data){setMasterError(error?.message||'Wilayah gagal ditambahkan.');return}
@@ -689,9 +689,9 @@ function UserManagement({currentProfileId,profiles,setProfiles,regions,setRegion
   }
   async function addCohort(){
     const year=Number(cohortYear);if(!year||year<2020||year>2100)return
-    if(demo){setCohorts(items=>[{id:\`demo-cohort-${Date.now()}\`,year,label:\`Angkatan ${year}\`},...items]);setCohortYear('');return}
+    if(demo){setCohorts(items=>[{id:`demo-cohort-${Date.now()}`,year,label:`Angkatan ${year}`},...items]);setCohortYear('');return}
     const supabase=createClient();if(!supabase)return
-    const {data,error}=await supabase.from('cohorts').insert({year,label:\`Angkatan ${year}\`}).select('id,year,label').single()
+    const {data,error}=await supabase.from('cohorts').insert({year,label:`Angkatan ${year}`}).select('id,year,label').single()
     if(error||!data){setMasterError(error?.message||'Angkatan gagal ditambahkan.');return}
     setCohorts(items=>[data,...items]);setCohortYear('');setMasterError('')
   }
@@ -740,7 +740,7 @@ function AuditTrail({items}:{items:AuditItem[]}){
     <div className="page-title-row"><div><span className="eyebrow">AUDIT TRAIL</span><h1>Riwayat perubahan sistem</h1><p>Jejak perubahan operasional untuk transparansi dan penelusuran masalah.</p></div></div>
     <section className="panel audit-panel">
       {items.length===0&&<div className="empty-review">Belum ada aktivitas audit.</div>}
-      {items.map(item=><div className="audit-row" key={item.id}><span className={\`audit-action ${item.action}\`}>{labels[item.action]||item.action}</span><div><strong>{item.actorName}</strong><span>{item.entityType.replaceAll('_',' ')}{item.entityId?\` • ${item.entityId.slice(0,8)}\`:''}</span></div><time>{new Date(item.createdAt).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</time></div>)}
+      {items.map(item=><div className="audit-row" key={item.id}><span className={`audit-action ${item.action}`}>{labels[item.action]||item.action}</span><div><strong>{item.actorName}</strong><span>{item.entityType.replaceAll('_',' ')}{item.entityId?` • ${item.entityId.slice(0,8)}`:''}</span></div><time>{new Date(item.createdAt).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</time></div>)}
     </section>
   </>
 }
