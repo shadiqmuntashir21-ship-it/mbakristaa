@@ -544,7 +544,7 @@ function CalendarView({role,activities}:{role:Role;activities:ActivityItem[]}){
 function CreateActivityModal({demo,profile,close,onCreated}:{demo:boolean;profile?:LiveData['profile'];close:()=>void;onCreated:(a:ActivityItem)=>void}){
   const [title,setTitle]=useState('')
   const [category,setCategory]=useState('Workshop')
-  const [scope,setScope]=useState('cohort_2025')
+  const [scope,setScope]=useState(profile?.app_role==='fasilitator'?'own_region':'cohort_2025')
   const [date,setDate]=useState('2026-10-24')
   const [requirements,setRequirements]=useState<Record<string,boolean>>({attendance:true,worksheet:true,journal:true})
   const [loading,setLoading]=useState(false)
@@ -729,7 +729,18 @@ function CreateActivityModal({demo,profile,close,onCreated}:{demo:boolean;profil
           <label>Nama aktivitas<input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Contoh: Workshop Community Empowerment Vol. 3"/></label>
           <div className="form-grid">
             <label>Kategori<select value={category} onChange={e=>setCategory(e.target.value)}><option>Workshop</option><option>Pembinaan Nasional</option><option>Pembinaan Wilayah</option><option>Jurnal</option><option>Assessment</option></select></label>
-            <label>Target<select value={scope} onChange={e=>setScope(e.target.value)}><option value="cohort_2025">Angkatan 2025</option><option value="cohort_2026">Angkatan 2026</option><option value="all">Semua Etoser</option><option value="own_region">Wilayah saya</option></select></label>
+            <label>Target<select value={scope} onChange={e=>setScope(e.target.value)}>
+              {profile?.app_role==='fasilitator' ? (
+                <option value="own_region">Wilayah saya</option>
+              ) : (
+                <>
+                  <option value="cohort_2025">Angkatan 2025</option>
+                  <option value="cohort_2026">Angkatan 2026</option>
+                  <option value="all">Semua Etoser</option>
+                  <option value="own_region">Wilayah saya</option>
+                </>
+              )}
+            </select></label>
           </div>
           <label>Tanggal kegiatan<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
           <div className="requirement-preview">
