@@ -1118,6 +1118,48 @@ export type Database = {
       }
     }
     Functions: {
+      demo_action: {
+        Args: {
+          p_action: string
+          p_payload?: Json
+          p_portal: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      demo_backup: {
+        Args: { p_portal: string; p_token: string }
+        Returns: Json
+      }
+      demo_login: {
+        Args: { p_pin: string; p_portal: string; p_username: string }
+        Returns: {
+          app_role: string
+          full_name: string
+          participant_code: string
+          portal: string
+          profile_id: string
+          region_id: string
+          token: string
+        }[]
+      }
+      demo_logout: { Args: { p_token: string }; Returns: boolean }
+      demo_session: {
+        Args: { p_portal: string; p_token: string }
+        Returns: {
+          app_role: string
+          cohort_id: string
+          full_name: string
+          participant_code: string
+          portal: string
+          profile_id: string
+          region_id: string
+        }[]
+      }
+      demo_snapshot: {
+        Args: { p_portal: string; p_token: string }
+        Returns: Json
+      }
       generate_activity_assignments: {
         Args: { p_activity_id: string }
         Returns: number

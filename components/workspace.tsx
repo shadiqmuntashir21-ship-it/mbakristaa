@@ -16,7 +16,7 @@ type RegionOption = {id:string;name:string;code:string}
 type CohortOption = {id:string;year:number;label:string}
 type AuditItem = {id:number;actorName:string;action:string;entityType:string;entityId?:string|null;createdAt:string}
 
-type LiveData = {
+export type LiveData = {
   profile?: { id:string; full_name:string; app_role:string; region?:string|null; cohort?:string|null }
   counts?: { participants:number; regions:number; activities:number; assignments:number; completion:number }
   activities?: ActivityItem[]
@@ -41,10 +41,12 @@ const roleNames: Record<Role,string> = {
 
 export function Workspace({
   demo=false,
+  lockRole=false,
   initialRole='tim_pusat',
   liveData
 }: {
   demo?:boolean
+  lockRole?:boolean
   initialRole?:Role
   liveData?:LiveData
 }) {
@@ -154,7 +156,7 @@ export function Workspace({
             <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Cari Etoser, aktivitas, wilayah..."/>
           </div>
           <div className="top-actions">
-            {demo&&(
+            {demo&&!lockRole&&(
               <div className="role-switch">
                 <button className={role==='tim_pusat'?'active':''} onClick={()=>{setRole('tim_pusat');setNav('dashboard')}}>Pusat</button>
                 <button className={role==='fasilitator'?'active':''} onClick={()=>{setRole('fasilitator');setNav('dashboard')}}>Fasilitator</button>
@@ -244,25 +246,21 @@ function Dashboard({role,demo,liveData,tasks,setNav}:{role:Role;demo:boolean;liv
 
   const facilitator=role==='fasilitator'
   const counts=liveData?.counts
-  const stats = facilitator
-    ? [
-        {v:'18',l:'Etoser aktif',d:'+2 semester ini'},
-        {v:'94%',l:'Kehadiran',d:'+4% dari bulan lalu'},
-        {v:'88%',l:'Tugas selesai',d:'16 dari 18 on-track'},
-        {v:'3',l:'Perlu tindak lanjut',d:'Prioritas minggu ini'}
-      ]
-    : [
-        {v:String(counts?.participants||342),l:'Etoser aktif',d:`${counts?.regions||17} wilayah aktif`},
-        {v:'91%',l:'Kehadiran',d:'+3% dari September'},
-        {v:`${counts?.completion||84}%`,l:'Tugas selesai',d:`${counts?.assignments||864} assignment`},
-        {v:'23',l:'Perlu tindak lanjut',d:'Prioritas minggu ini'}
-      ]
+  const pdata=liveData?.participants||[]
+  const avgAttendance=pdata.length?Math.round(pdata.reduce((sum,p)=>sum+p.attendance,0)/pdata.length):91
+  const attentionCount=pdata.filter(p=>p.status!=='Aman').length
+  const stats = [
+    {v:String(counts?.participants||pdata.length||342),l:'Etoser aktif',d:facilitator?(liveData?.profile?.region||'Wilayah'):`${counts?.regions||17} wilayah aktif`},
+    {v:`${avgAttendance}%`,l:'Kehadiran',d:'Rata-rata histori 6 bulan'},
+    {v:`${counts?.completion||84}%`,l:'Tugas selesai',d:`${counts?.assignments||0} assignment tercatat`},
+    {v:String(attentionCount),l:'Perlu tindak lanjut',d:'Prioritas berdasarkan histori'}
+  ]
 
   return (
     <>
       <div className="page-title-row">
         <div>
-          <span className="eyebrow">{facilitator?'WILAYAH PALU':'COMMAND CENTER NASIONAL'}</span>
+          <span className="eyebrow">{facilitator?`WILAYAH ${(liveData?.profile?.region||'').toUpperCase()}`:'COMMAND CENTER NASIONAL'}</span>
           <h1>{facilitator?'Ringkasan pembinaan wilayah':'Pembinaan Oktober 2026'}</h1>
           <p>{facilitator?'Pantau progres Etoser dan pekerjaan fasilitator dari satu tempat.':'Lihat kondisi pembinaan nasional tanpa membuka banyak sheet dan folder.'}</p>
         </div>
