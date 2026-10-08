@@ -146,6 +146,7 @@ export function Workspace({
       {modal&&(
         <CreateActivityModal
           demo={demo}
+          profile={liveData?.profile}
           close={()=>setModal(false)}
           onCreated={a=>{setActivities(v=>[a,...v]);setModal(false)}}
         />
@@ -540,7 +541,7 @@ function CalendarView({role,activities}:{role:Role;activities:ActivityItem[]}){
   )
 }
 
-function CreateActivityModal({demo,close,onCreated}:{demo:boolean;close:()=>void;onCreated:(a:ActivityItem)=>void}){
+function CreateActivityModal({demo,profile,close,onCreated}:{demo:boolean;profile?:LiveData['profile'];close:()=>void;onCreated:(a:ActivityItem)=>void}){
   const [title,setTitle]=useState('')
   const [category,setCategory]=useState('Workshop')
   const [scope,setScope]=useState('cohort_2025')
@@ -599,15 +600,31 @@ function CreateActivityModal({demo,close,onCreated}:{demo:boolean;close:()=>void
       return
     }
 
-    const {data:prof,error:profileError}=await supabase
-      .from('profiles')
-      .select('id,app_role,region_id')
-      .single()
-
-    if(profileError||!prof){
+    if(!profile?.id){
       setLoading(false)
       setError('Profil pengguna tidak ditemukan.')
       return
+    }
+
+    const prof={
+      id:profile.id,
+      app_role:profile.app_role,
+      region_id:null as string|null
+    }
+
+    if(profile.app_role==='fasilitator'){
+      const {data:row,error:profileError}=await supabase
+        .from('profiles')
+        .select('region_id')
+        .eq('id',profile.id)
+        .single()
+
+      if(profileError||!row?.region_id){
+        setLoading(false)
+        setError('Wilayah fasilitator belum dikonfigurasi.')
+        return
+      }
+      prof.region_id=row.region_id
     }
 
     const startIso=`${date}T08:00:00+08:00`
